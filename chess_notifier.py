@@ -228,10 +228,7 @@ def send_notification(notification):
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
 
     if not webhook_url:
-        print(
-            "DISCORD_WEBHOOK_URL not set. "
-            "Skipping Discord notification."
-        )
+        print("DISCORD_WEBHOOK_URL not set. Skipping Discord notification.")
         return
 
     our_team_won = (
@@ -263,10 +260,7 @@ def send_match_notification(match):
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
 
     if not webhook_url:
-        print(
-            "DISCORD_WEBHOOK_URL not set. "
-            "Skipping Discord notification."
-        )
+        print("DISCORD_WEBHOOK_URL not set. Skipping Discord notification.")
         return
 
     if match["winner"] is None:
@@ -280,8 +274,8 @@ def send_match_notification(match):
         result = f"{match['winner']} won"
 
     message = (
-        f"♟️ **No Stress Chess Update**\n\n"
-        f"🏟️ **Match Completed:** {match['match']}\n\n"
+        f"⚔️ **No Stress Chess Match Completed**\n\n"
+        f"🏟️ **Match:** {match['match']}\n\n"
         f"{emoji} {result}\n\n"
         f"🏆 **Final Score:**\n"
         f"{match['score']}"
@@ -311,6 +305,9 @@ def main():
         print("No matches found")
         return
 
+    match_notifications_sent = 0
+    game_notifications_sent = 0
+
     finished_matches = matches.get(
         "finished",
         []
@@ -338,6 +335,8 @@ def main():
 
             send_match_notification(completed_match)
 
+            match_notifications_sent += 1
+
             seen_matches[match_id] = {
                 "match": completed_match["match"],
                 "date": datetime.now().strftime(
@@ -355,8 +354,6 @@ def main():
         f"Active matches found: {len(active_matches)}"
     )
 
-    sent_notifications = 0
-
     for match in active_matches:
 
         notifications = process_match(match)
@@ -370,7 +367,7 @@ def main():
 
             send_notification(notification)
 
-            sent_notifications += 1
+            game_notifications_sent += 1
 
             seen_games[game_id] = {
                 "winner": notification["winner"],
@@ -386,7 +383,8 @@ def main():
     seen_games = cleanup_history(seen_games)
 
     print()
-    print(f"New game notifications sent: {sent_notifications}")
+    print(f"New game notifications sent: {game_notifications_sent}")
+    print(f"New match notifications sent: {match_notifications_sent}")
 
     save_seen_matches(seen_matches)
 
