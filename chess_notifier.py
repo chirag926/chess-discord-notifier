@@ -7,9 +7,9 @@ from datetime import datetime
 import requests
 
 
-CLUB_NAME = "no-stress-chess-2"          # Chess.com API identifier
-CLUB_DISPLAY_NAME = "No Stress Chess"    # Discord display name
-OUR_TEAM_NAME = "no stress chess"        # Used for win detection
+CLUB_NAME = "no-stress-chess-2"
+CLUB_DISPLAY_NAME = "No Stress Chess"
+OUR_TEAM_NAME = "no stress chess"
 
 SEEN_FILE = "seen_games.json"
 MAX_HISTORY = 1000
@@ -223,6 +223,8 @@ def main():
 
     print(f"Games already seen: {len(seen_games)}")
 
+    original_seen_games = dict(seen_games)
+
     seen_games = cleanup_history(seen_games)
 
     matches = fetch_club_matches()
@@ -267,12 +269,16 @@ def main():
                 )
             }
 
+    seen_games = cleanup_history(seen_games)
+
     print()
     print(f"New notifications sent: {sent_notifications}")
 
-    seen_games = cleanup_history(seen_games)
-
-    save_seen_games(seen_games)
+    if seen_games != original_seen_games:
+        save_seen_games(seen_games)
+        print("seen_games.json updated")
+    else:
+        print("No changes to seen_games.json")
 
 
 if __name__ == "__main__":
