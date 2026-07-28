@@ -159,7 +159,7 @@ def process_match(match):
                             "winner": winner,
                             "loser": loser,
                             "winner_team": team_name,
-                            "match": CLUB_DISPLAY_NAME,
+                            "match": data["name"],
                             "score": (
                                 f"{team1['name']}: {team1['score']}\n"
                                 f"{team2['name']}: {team2['score']}"
@@ -189,12 +189,13 @@ def send_notification(notification):
     result_emoji = "🎉" if our_team_won else "♟️"
 
     message = (
-        f"♟️ **{notification['match']}**\n\n"
+        f"♟️ **No Stress Chess Update**\n\n"
+        f"🏟️ **Match:** {notification['match']}\n\n"
         f"{result_emoji} **{notification['winner']}** defeated "
         f"**{notification['loser']}**!\n\n"
-        f"🏆 Match Score:\n"
+        f"🏆 **Match Score:**\n"
         f"{notification['score']}\n\n"
-        f"Game:\n"
+        f"🎮 **Game:**\n"
         f"{notification['url']}"
     )
 
