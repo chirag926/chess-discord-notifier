@@ -40,6 +40,9 @@ jobs:
 
           git add seen_games.json
 
-          git commit -m "Update seen games" || exit 0
-
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "Update seen games"
+            git push
+          else
+            echo "No changes to seen_games.json"
+          fi
