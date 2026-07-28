@@ -138,5 +138,12 @@
         "winner_team": "No Stress Chess",
         "match": "No Stress Chess",
         "date": "2026-07-28 01:23:09"
+    },
+    "1002548472": {
+        "winner": "Kwakuwan",
+        "loser": "Just-2-Win",
+        "winner_team": "No Stress Chess",
+        "match": "Chess960 mode",
+        "date": "2026-07-28 16:58:31"
     }
 }
