@@ -3,10 +3,15 @@ name: Chess Discord Notification
 on:
   workflow_dispatch:
   schedule:
+    # Every 15 minutes
     - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
 
 jobs:
   check-games:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -16,14 +21,25 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
           pip install requests
 
-      - name: Run notifier
+      - name: Run chess notifier
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           python chess_notifier.py
+
+      - name: Commit updated seen games
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git add seen_games.json
+
+          git commit -m "Update seen games" || exit 0
+
+          git push
