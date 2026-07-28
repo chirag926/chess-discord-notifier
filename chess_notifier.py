@@ -213,8 +213,6 @@ def process_completed_match(match):
     return {
         "match_id": match_id,
         "match": data["name"],
-        "team1": team1["name"],
-        "team2": team2["name"],
         "score": (
             f"{team1['name']}: {team1['score']}\n"
             f"{team2['name']}: {team2['score']}"
@@ -296,6 +294,9 @@ def main():
     seen_games = load_seen_games()
     seen_matches = load_seen_matches()
 
+    original_seen_games = dict(seen_games)
+    original_seen_matches = dict(seen_matches)
+
     print(f"Games already seen: {len(seen_games)}")
     print(f"Completed matches already seen: {len(seen_matches)}")
 
@@ -305,17 +306,12 @@ def main():
         print("No matches found")
         return
 
-    match_notifications_sent = 0
     game_notifications_sent = 0
+    match_notifications_sent = 0
 
-    finished_matches = matches.get(
-        "finished",
-        []
-    )
+    finished_matches = matches.get("finished", [])
 
-    print(
-        f"Finished matches found: {len(finished_matches)}"
-    )
+    print(f"Finished matches found: {len(finished_matches)}")
 
     for match in finished_matches:
 
@@ -344,15 +340,9 @@ def main():
                 )
             }
 
+    active_matches = matches.get("in_progress", [])
 
-    active_matches = matches.get(
-        "in_progress",
-        []
-    )
-
-    print(
-        f"Active matches found: {len(active_matches)}"
-    )
+    print(f"Active matches found: {len(active_matches)}")
 
     for match in active_matches:
 
@@ -379,19 +369,25 @@ def main():
                 )
             }
 
-
     seen_games = cleanup_history(seen_games)
 
     print()
     print(f"New game notifications sent: {game_notifications_sent}")
     print(f"New match notifications sent: {match_notifications_sent}")
 
-    save_seen_matches(seen_matches)
-
-    if seen_games:
+    if seen_games != original_seen_games:
         save_seen_games(seen_games)
+        print("seen_games.json updated")
 
-    print("JSON files updated")
+    if seen_matches != original_seen_matches:
+        save_seen_matches(seen_matches)
+        print("seen_matches.json updated")
+
+    if (
+        seen_games == original_seen_games
+        and seen_matches == original_seen_matches
+    ):
+        print("No JSON changes")
 
 
 if __name__ == "__main__":
