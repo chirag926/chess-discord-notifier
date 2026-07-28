@@ -12,6 +12,8 @@ CLUB_DISPLAY_NAME = "No Stress Chess"
 OUR_TEAM_NAME = "no stress chess"
 
 SEEN_FILE = "seen_games.json"
+SEEN_MATCHES_FILE = "seen_matches.json"
+
 MAX_HISTORY = 1000
 
 HEADERS = {
@@ -72,6 +74,23 @@ def save_seen_games(seen_games):
         )
 
 
+def load_seen_matches():
+    if not os.path.exists(SEEN_MATCHES_FILE):
+        return {}
+
+    with open(SEEN_MATCHES_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_seen_matches(seen_matches):
+    with open(SEEN_MATCHES_FILE, "w") as f:
+        json.dump(
+            seen_matches,
+            f,
+            indent=4
+        )
+
+
 def cleanup_history(seen_games):
     if len(seen_games) <= MAX_HISTORY:
         return seen_games
@@ -92,6 +111,7 @@ def cleanup_history(seen_games):
 
 
 def determine_result(game):
+
     if isinstance(game.get("white"), dict):
 
         white = game["white"]
@@ -171,6 +191,38 @@ def process_match(match):
     return notifications
 
 
+def process_completed_match(match):
+
+    match_id = match["@id"].split("/")[-1]
+
+    data = fetch_match(match_id)
+
+    if not data:
+        return None
+
+    team1 = data["teams"]["team1"]
+    team2 = data["teams"]["team2"]
+
+    if team1["result"] == "win":
+        winner = team1["name"]
+    elif team2["result"] == "win":
+        winner = team2["name"]
+    else:
+        winner = None
+
+    return {
+        "match_id": match_id,
+        "match": data["name"],
+        "team1": team1["name"],
+        "team2": team2["name"],
+        "score": (
+            f"{team1['name']}: {team1['score']}\n"
+            f"{team2['name']}: {team2['score']}"
+        ),
+        "winner": winner
+    }
+
+
 def send_notification(notification):
 
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
@@ -186,7 +238,7 @@ def send_notification(notification):
         OUR_TEAM_NAME in notification["winner_team"].lower()
     )
 
-    result_emoji = "🎉" if our_team_won else "♟️"
+    result_emoji = "🎉" if our_team_won else "😞"
 
     message = (
         f"♟️ **No Stress Chess Update**\n\n"
@@ -199,20 +251,47 @@ def send_notification(notification):
         f"{notification['url']}"
     )
 
-    payload = {
-        "content": message
-    }
-
-    response = requests.post(
+    requests.post(
         webhook_url,
-        json=payload,
+        json={"content": message},
         timeout=10
     )
 
-    if response.status_code != 204:
-        print("Discord error:")
-        print(response.status_code)
-        print(response.text)
+
+def send_match_notification(match):
+
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+
+    if not webhook_url:
+        print(
+            "DISCORD_WEBHOOK_URL not set. "
+            "Skipping Discord notification."
+        )
+        return
+
+    if match["winner"] is None:
+        emoji = "🤝"
+        result = "ended in a draw"
+    elif OUR_TEAM_NAME in match["winner"].lower():
+        emoji = "🎉"
+        result = f"{match['winner']} won"
+    else:
+        emoji = "😞"
+        result = f"{match['winner']} won"
+
+    message = (
+        f"♟️ **No Stress Chess Update**\n\n"
+        f"🏟️ **Match Completed:** {match['match']}\n\n"
+        f"{emoji} {result}\n\n"
+        f"🏆 **Final Score:**\n"
+        f"{match['score']}"
+    )
+
+    requests.post(
+        webhook_url,
+        json={"content": message},
+        timeout=10
+    )
 
 
 def main():
@@ -221,18 +300,51 @@ def main():
     print(f"Checking club: {CLUB_DISPLAY_NAME}")
 
     seen_games = load_seen_games()
+    seen_matches = load_seen_matches()
 
     print(f"Games already seen: {len(seen_games)}")
-
-    original_seen_games = dict(seen_games)
-
-    seen_games = cleanup_history(seen_games)
+    print(f"Completed matches already seen: {len(seen_matches)}")
 
     matches = fetch_club_matches()
 
     if not matches:
         print("No matches found")
         return
+
+    finished_matches = matches.get(
+        "finished",
+        []
+    )
+
+    print(
+        f"Finished matches found: {len(finished_matches)}"
+    )
+
+    for match in finished_matches:
+
+        match_id = match["@id"].split("/")[-1]
+
+        if match_id in seen_matches:
+            continue
+
+        completed_match = process_completed_match(match)
+
+        if completed_match:
+
+            print()
+            print("NEW COMPLETED MATCH:")
+            print(completed_match["match"])
+            print(completed_match["score"])
+
+            send_match_notification(completed_match)
+
+            seen_matches[match_id] = {
+                "match": completed_match["match"],
+                "date": datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            }
+
 
     active_matches = matches.get(
         "in_progress",
@@ -270,16 +382,18 @@ def main():
                 )
             }
 
+
     seen_games = cleanup_history(seen_games)
 
     print()
-    print(f"New notifications sent: {sent_notifications}")
+    print(f"New game notifications sent: {sent_notifications}")
 
-    if seen_games != original_seen_games:
+    save_seen_matches(seen_matches)
+
+    if seen_games:
         save_seen_games(seen_games)
-        print("seen_games.json updated")
-    else:
-        print("No changes to seen_games.json")
+
+    print("JSON files updated")
 
 
 if __name__ == "__main__":
