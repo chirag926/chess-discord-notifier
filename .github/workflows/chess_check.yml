@@ -33,16 +33,16 @@ jobs:
         run: |
           python chess_notifier.py
 
-      - name: Commit updated seen games
+      - name: Commit updated notification history
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
 
-          git add seen_games.json
+          git add seen_games.json seen_matches.json
 
           if ! git diff --cached --quiet; then
-            git commit -m "Update seen games"
+            git commit -m "Update notification history"
             git push
           else
-            echo "No changes to seen_games.json"
+            echo "No changes to notification history"
           fi
