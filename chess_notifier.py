@@ -221,6 +221,8 @@ def main():
 
     seen_games = load_seen_games()
 
+    print(f"Games already seen: {len(seen_games)}")
+
     seen_games = cleanup_history(seen_games)
 
     matches = fetch_club_matches()
@@ -238,6 +240,8 @@ def main():
         f"Active matches found: {len(active_matches)}"
     )
 
+    sent_notifications = 0
+
     for match in active_matches:
 
         notifications = process_match(match)
@@ -251,6 +255,8 @@ def main():
 
             send_notification(notification)
 
+            sent_notifications += 1
+
             seen_games[game_id] = {
                 "winner": notification["winner"],
                 "loser": notification["loser"],
@@ -260,6 +266,9 @@ def main():
                     "%Y-%m-%d %H:%M:%S"
                 )
             }
+
+    print()
+    print(f"New notifications sent: {sent_notifications}")
 
     seen_games = cleanup_history(seen_games)
 
