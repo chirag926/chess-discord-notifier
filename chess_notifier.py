@@ -124,7 +124,7 @@ def process_match(match):
 
     print(
         f"Score: {team1['name']} {team1['score']} - "
-        f"{team2['score']} {team2['name']}"
+        f"{team2['name']} {team2['score']}"
     )
 
     notifications = []
@@ -161,10 +161,8 @@ def process_match(match):
                             "winner_team": team_name,
                             "match": CLUB_DISPLAY_NAME,
                             "score": (
-                                f"{team1['name']} "
-                                f"{team1['score']} - "
-                                f"{team2['name']} "
-                                f"{team2['score']}"
+                                f"{team1['name']}: {team1['score']}\n"
+                                f"{team2['name']}: {team2['score']}"
                             ),
                             "url": game["url"]
                         }
@@ -194,7 +192,7 @@ def send_notification(notification):
         f"♟️ **{notification['match']}**\n\n"
         f"{result_emoji} **{notification['winner']}** defeated "
         f"**{notification['loser']}**!\n\n"
-        f"Current Score:\n"
+        f"🏆 Match Score:\n"
         f"{notification['score']}\n\n"
         f"Game:\n"
         f"{notification['url']}"
