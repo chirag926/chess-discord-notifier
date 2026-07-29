@@ -145,5 +145,19 @@
         "winner_team": "No Stress Chess",
         "match": "Chess960 mode",
         "date": "2026-07-28 16:58:31"
+    },
+    "1004171418": {
+        "winner": "Whyitbman",
+        "loser": "vsrptd",
+        "winner_team": "No Stress Chess",
+        "match": "Daily Club Match for July",
+        "date": "2026-07-29 07:31:21"
+    },
+    "1004171416": {
+        "winner": "Whyitbman",
+        "loser": "vsrptd",
+        "winner_team": "No Stress Chess",
+        "match": "Daily Club Match for July",
+        "date": "2026-07-29 07:31:21"
     }
 }
