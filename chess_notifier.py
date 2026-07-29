@@ -58,6 +58,7 @@ def fetch_board(board_url):
 
 
 def load_seen_games():
+
     if not os.path.exists(SEEN_FILE):
         return {}
 
@@ -66,6 +67,7 @@ def load_seen_games():
 
 
 def save_seen_games(seen_games):
+
     with open(SEEN_FILE, "w") as f:
         json.dump(
             seen_games,
@@ -75,6 +77,7 @@ def save_seen_games(seen_games):
 
 
 def load_seen_matches():
+
     if not os.path.exists(SEEN_MATCHES_FILE):
         return {}
 
@@ -83,6 +86,7 @@ def load_seen_matches():
 
 
 def save_seen_matches(seen_matches):
+
     with open(SEEN_MATCHES_FILE, "w") as f:
         json.dump(
             seen_matches,
@@ -92,6 +96,7 @@ def save_seen_matches(seen_matches):
 
 
 def cleanup_history(seen_games):
+
     if len(seen_games) <= MAX_HISTORY:
         return seen_games
 
@@ -108,7 +113,6 @@ def cleanup_history(seen_games):
     )
 
     return trimmed
-
 
 def determine_result(game):
 
@@ -133,7 +137,7 @@ def process_match(match):
     data = fetch_match(match_id)
 
     if not data:
-        return []
+        return [], None
 
     print()
     print("MATCH:")
@@ -141,6 +145,11 @@ def process_match(match):
 
     team1 = data["teams"]["team1"]
     team2 = data["teams"]["team2"]
+
+    score = (
+        f"{team1['name']}: {team1['score']}\n"
+        f"{team2['name']}: {team2['score']}"
+    )
 
     print(
         f"Score: {team1['name']} {team1['score']} - "
@@ -180,15 +189,11 @@ def process_match(match):
                             "loser": loser,
                             "winner_team": team_name,
                             "match": data["name"],
-                            "score": (
-                                f"{team1['name']}: {team1['score']}\n"
-                                f"{team2['name']}: {team2['score']}"
-                            ),
                             "url": game["url"]
                         }
                     )
 
-    return notifications
+    return notifications, score
 
 
 def process_completed_match(match):
@@ -205,8 +210,10 @@ def process_completed_match(match):
 
     if team1["result"] == "win":
         winner = team1["name"]
+
     elif team2["result"] == "win":
         winner = team2["name"]
+
     else:
         winner = None
 
@@ -220,30 +227,39 @@ def process_completed_match(match):
         "winner": winner
     }
 
-
-def send_notification(notification):
+def send_game_update_notification(match_name, games, score):
 
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
 
     if not webhook_url:
-        print("DISCORD_WEBHOOK_URL not set. Skipping Discord notification.")
+        print(
+            "DISCORD_WEBHOOK_URL not set. "
+            "Skipping Discord notification."
+        )
         return
-
-    our_team_won = (
-        OUR_TEAM_NAME in notification["winner_team"].lower()
-    )
-
-    result_emoji = "🎉" if our_team_won else "😞"
 
     message = (
         f"♟️ **No Stress Chess Update**\n\n"
-        f"🏟️ **Match:** {notification['match']}\n\n"
-        f"{result_emoji} **{notification['winner']}** defeated "
-        f"**{notification['loser']}**!\n\n"
-        f"🏆 **Match Score:**\n"
-        f"{notification['score']}\n\n"
-        f"🎮 **Game:**\n"
-        f"{notification['url']}"
+        f"⚔️ **Match:** {match_name}\n\n"
+        f"📝 **Games completed since the last update:**\n\n"
+    )
+
+    for game in games:
+
+        if game["result"] == "win":
+            emoji = "🎉"
+        else:
+            emoji = "😞"
+
+        message += (
+            f"• {emoji} **{game['winner']}** defeated "
+            f"**{game['loser']}**\n"
+            f"  🎮 {game['url']}\n\n"
+        )
+
+    message += (
+        f"🏆 **Current Match Score:**\n"
+        f"{score}"
     )
 
     requests.post(
@@ -258,15 +274,20 @@ def send_match_notification(match):
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
 
     if not webhook_url:
-        print("DISCORD_WEBHOOK_URL not set. Skipping Discord notification.")
+        print(
+            "DISCORD_WEBHOOK_URL not set. "
+            "Skipping Discord notification."
+        )
         return
 
     if match["winner"] is None:
         emoji = "🤝"
         result = "ended in a draw"
+
     elif OUR_TEAM_NAME in match["winner"].lower():
         emoji = "🎉"
         result = f"{match['winner']} won"
+
     else:
         emoji = "😞"
         result = f"{match['winner']} won"
@@ -284,7 +305,6 @@ def send_match_notification(match):
         json={"content": message},
         timeout=10
     )
-
 
 def main():
 
@@ -309,9 +329,14 @@ def main():
     game_notifications_sent = 0
     match_notifications_sent = 0
 
-    finished_matches = matches.get("finished", [])
+    finished_matches = matches.get(
+        "finished",
+        []
+    )
 
-    print(f"Finished matches found: {len(finished_matches)}")
+    print(
+        f"Finished matches found: {len(finished_matches)}"
+    )
 
     for match in finished_matches:
 
@@ -340,13 +365,21 @@ def main():
                 )
             }
 
-    active_matches = matches.get("in_progress", [])
 
-    print(f"Active matches found: {len(active_matches)}")
+    active_matches = matches.get(
+        "in_progress",
+        []
+    )
+
+    print(
+        f"Active matches found: {len(active_matches)}"
+    )
 
     for match in active_matches:
 
-        notifications = process_match(match)
+        notifications, score = process_match(match)
+
+        unseen_games = []
 
         for notification in notifications:
 
@@ -355,9 +388,20 @@ def main():
             if game_id in seen_games:
                 continue
 
-            send_notification(notification)
+            our_team_won = (
+                OUR_TEAM_NAME in notification["winner_team"].lower()
+            )
 
-            game_notifications_sent += 1
+            result = "win" if our_team_won else "loss"
+
+            unseen_games.append(
+                {
+                    "winner": notification["winner"],
+                    "loser": notification["loser"],
+                    "result": result,
+                    "url": notification["url"]
+                }
+            )
 
             seen_games[game_id] = {
                 "winner": notification["winner"],
@@ -369,11 +413,26 @@ def main():
                 )
             }
 
+        if unseen_games:
+
+            send_game_update_notification(
+                notifications[0]["match"],
+                unseen_games,
+                score
+            )
+
+            game_notifications_sent += len(unseen_games)
+
+
     seen_games = cleanup_history(seen_games)
 
     print()
-    print(f"New game notifications sent: {game_notifications_sent}")
-    print(f"New match notifications sent: {match_notifications_sent}")
+    print(
+        f"New game notifications sent: {game_notifications_sent}"
+    )
+    print(
+        f"New match notifications sent: {match_notifications_sent}"
+    )
 
     if seen_games != original_seen_games:
         save_seen_games(seen_games)
