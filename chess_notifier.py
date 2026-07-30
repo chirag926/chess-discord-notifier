@@ -13,8 +13,11 @@ OUR_TEAM_NAME = "no stress chess"
 
 SEEN_FILE = "seen_games.json"
 SEEN_MATCHES_FILE = "seen_matches.json"
+SEEN_REGISTERED_FILE = "seen_registered_matches.json"
 
-MAX_HISTORY = 1000
+MAX_GAME_HISTORY = 1000
+MAX_MATCH_HISTORY = 500
+MAX_REGISTERED_HISTORY = 200
 
 HEADERS = {
     "User-Agent": "NoStressChessDiscordNotifier/1.0"
@@ -22,6 +25,7 @@ HEADERS = {
 
 
 def execute_api_request(url):
+
     try:
         response = requests.get(
             url,
@@ -44,16 +48,21 @@ def execute_api_request(url):
 
 
 def fetch_club_matches():
+
     url = f"https://api.chess.com/pub/club/{CLUB_NAME}/matches"
+
     return execute_api_request(url)
 
 
 def fetch_match(match_id):
+
     url = f"https://api.chess.com/pub/match/{match_id}"
+
     return execute_api_request(url)
 
 
 def fetch_board(board_url):
+
     return execute_api_request(board_url)
 
 
@@ -95,24 +104,47 @@ def save_seen_matches(seen_matches):
         )
 
 
-def cleanup_history(seen_games):
+def load_seen_registered_matches():
 
-    if len(seen_games) <= MAX_HISTORY:
-        return seen_games
+    if not os.path.exists(SEEN_REGISTERED_FILE):
+        return {}
 
-    sorted_games = sorted(
-        seen_games.items(),
+    with open(SEEN_REGISTERED_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_seen_registered_matches(seen_registered_matches):
+
+    with open(SEEN_REGISTERED_FILE, "w") as f:
+        json.dump(
+            seen_registered_matches,
+            f,
+            indent=4
+        )
+
+
+def cleanup_history(history, max_history):
+
+    if len(history) <= max_history:
+        return history
+
+    sorted_history = sorted(
+        history.items(),
         key=lambda x: x[1]["date"],
         reverse=True
     )
 
-    trimmed = dict(sorted_games[:MAX_HISTORY])
+    trimmed = dict(
+        sorted_history[:max_history]
+    )
 
     print(
-        f"Cleanup: removed {len(seen_games) - MAX_HISTORY} old games"
+        f"Cleanup: removed "
+        f"{len(history) - max_history} old entries"
     )
 
     return trimmed
+
 
 def determine_result(game):
 
@@ -227,6 +259,37 @@ def process_completed_match(match):
         "winner": winner
     }
 
+
+def process_registered_match(match):
+
+    match_id = match["@id"].split("/")[-1]
+
+    data = fetch_match(match_id)
+
+    if not data:
+        return None
+
+    team1 = data["teams"]["team1"]
+    team2 = data["teams"]["team2"]
+
+    if OUR_TEAM_NAME in team1["name"].lower():
+        opponent = team2["name"]
+    else:
+        opponent = team1["name"]
+
+    return {
+        "match_id": match_id,
+        "match": data["name"],
+        "opponent": opponent,
+        "description": data.get(
+            "description",
+            "Daily match"
+        ),
+        "start_time": data["start_time"],
+        "url": data["url"]
+    }
+
+
 def send_game_update_notification(match_name, games, score):
 
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
@@ -248,6 +311,7 @@ def send_game_update_notification(match_name, games, score):
 
         if game["result"] == "win":
             emoji = "🎉"
+
         else:
             emoji = "😞"
 
@@ -306,6 +370,41 @@ def send_match_notification(match):
         timeout=10
     )
 
+
+def send_registration_notification(match):
+
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+
+    if not webhook_url:
+        print(
+            "DISCORD_WEBHOOK_URL not set. "
+            "Skipping Discord notification."
+        )
+        return
+
+    start_time = datetime.fromtimestamp(
+        match["start_time"]
+    ).strftime(
+        "%A, %B %-d, %Y %-I:%M %p"
+    )
+
+    message = (
+        f"📝 **New Daily Club Match Open**\n\n"
+        f"♟️ **Match Name:** {match['match']}\n\n"
+        f"⚔️ **Opponent:** {match['opponent']}\n\n"
+        f"⏱️ **Time Control:** {match['description']}\n\n"
+        f"🗓️ **Starts:** {start_time}\n\n"
+        f"🔗 **Join Match**\n"
+        f"{match['url']}"
+    )
+
+    requests.post(
+        webhook_url,
+        json={"content": message},
+        timeout=10
+    )
+
+
 def main():
 
     print(datetime.now())
@@ -313,12 +412,27 @@ def main():
 
     seen_games = load_seen_games()
     seen_matches = load_seen_matches()
+    seen_registered_matches = load_seen_registered_matches()
 
     original_seen_games = dict(seen_games)
     original_seen_matches = dict(seen_matches)
+    original_seen_registered_matches = dict(
+        seen_registered_matches
+    )
 
-    print(f"Games already seen: {len(seen_games)}")
-    print(f"Completed matches already seen: {len(seen_matches)}")
+    print(
+        f"Games already seen: {len(seen_games)}"
+    )
+
+    print(
+        f"Completed matches already seen: "
+        f"{len(seen_matches)}"
+    )
+
+    print(
+        f"Registered matches already seen: "
+        f"{len(seen_registered_matches)}"
+    )
 
     matches = fetch_club_matches()
 
@@ -326,8 +440,63 @@ def main():
         print("No matches found")
         return
 
+
     game_notifications_sent = 0
     match_notifications_sent = 0
+    registration_notifications_sent = 0
+
+
+    #
+    # REGISTERED MATCHES
+    #
+
+    registered_matches = matches.get(
+        "registered",
+        []
+    )
+
+    print(
+        f"Registered matches found: "
+        f"{len(registered_matches)}"
+    )
+
+    for match in registered_matches:
+
+        match_id = match["@id"].split("/")[-1]
+
+        if match_id in seen_registered_matches:
+            continue
+
+        registered_match = process_registered_match(match)
+
+        if registered_match:
+
+            print()
+            print("NEW REGISTERED MATCH:")
+            print(
+                registered_match["match"]
+            )
+            print(
+                registered_match["opponent"]
+            )
+
+            send_registration_notification(
+                registered_match
+            )
+
+            registration_notifications_sent += 1
+
+            seen_registered_matches[match_id] = {
+                "match": registered_match["match"],
+                "date": datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            }
+
+
+    #
+    # FINISHED MATCHES
+    #
 
     finished_matches = matches.get(
         "finished",
@@ -335,7 +504,8 @@ def main():
     )
 
     print(
-        f"Finished matches found: {len(finished_matches)}"
+        f"Finished matches found: "
+        f"{len(finished_matches)}"
     )
 
     for match in finished_matches:
@@ -351,10 +521,16 @@ def main():
 
             print()
             print("NEW COMPLETED MATCH:")
-            print(completed_match["match"])
-            print(completed_match["score"])
+            print(
+                completed_match["match"]
+            )
+            print(
+                completed_match["score"]
+            )
 
-            send_match_notification(completed_match)
+            send_match_notification(
+                completed_match
+            )
 
             match_notifications_sent += 1
 
@@ -366,13 +542,18 @@ def main():
             }
 
 
+    #
+    # ACTIVE MATCHES
+    #
+
     active_matches = matches.get(
         "in_progress",
         []
     )
 
     print(
-        f"Active matches found: {len(active_matches)}"
+        f"Active matches found: "
+        f"{len(active_matches)}"
     )
 
     for match in active_matches:
@@ -389,10 +570,15 @@ def main():
                 continue
 
             our_team_won = (
-                OUR_TEAM_NAME in notification["winner_team"].lower()
+                OUR_TEAM_NAME
+                in notification["winner_team"].lower()
             )
 
-            result = "win" if our_team_won else "loss"
+            result = (
+                "win"
+                if our_team_won
+                else "loss"
+            )
 
             unseen_games.append(
                 {
@@ -413,6 +599,7 @@ def main():
                 )
             }
 
+
         if unseen_games:
 
             send_game_update_notification(
@@ -421,33 +608,97 @@ def main():
                 score
             )
 
-            game_notifications_sent += len(unseen_games)
+            game_notifications_sent += len(
+                unseen_games
+            )
 
 
-    seen_games = cleanup_history(seen_games)
+    #
+    # CLEANUP HISTORY
+    #
+
+    seen_games = cleanup_history(
+        seen_games,
+        MAX_GAME_HISTORY
+    )
+
+    seen_matches = cleanup_history(
+        seen_matches,
+        MAX_MATCH_HISTORY
+    )
+
+    seen_registered_matches = cleanup_history(
+        seen_registered_matches,
+        MAX_REGISTERED_HISTORY
+    )
+
 
     print()
+
     print(
-        f"New game notifications sent: {game_notifications_sent}"
+        f"New registration notifications sent: "
+        f"{registration_notifications_sent}"
     )
+
     print(
-        f"New match notifications sent: {match_notifications_sent}"
+        f"New game notifications sent: "
+        f"{game_notifications_sent}"
     )
+
+    print(
+        f"New match notifications sent: "
+        f"{match_notifications_sent}"
+    )
+
 
     if seen_games != original_seen_games:
-        save_seen_games(seen_games)
-        print("seen_games.json updated")
+
+        save_seen_games(
+            seen_games
+        )
+
+        print(
+            "seen_games.json updated"
+        )
+
 
     if seen_matches != original_seen_matches:
-        save_seen_matches(seen_matches)
-        print("seen_matches.json updated")
+
+        save_seen_matches(
+            seen_matches
+        )
+
+        print(
+            "seen_matches.json updated"
+        )
+
+
+    if (
+        seen_registered_matches
+        != original_seen_registered_matches
+    ):
+
+        save_seen_registered_matches(
+            seen_registered_matches
+        )
+
+        print(
+            "seen_registered_matches.json updated"
+        )
+
 
     if (
         seen_games == original_seen_games
         and seen_matches == original_seen_matches
+        and seen_registered_matches
+        == original_seen_registered_matches
     ):
-        print("No JSON changes")
+
+        print(
+            "No JSON changes"
+        )
 
 
 if __name__ == "__main__":
+
     main()
