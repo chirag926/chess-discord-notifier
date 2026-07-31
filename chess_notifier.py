@@ -148,17 +148,31 @@ def cleanup_history(history, max_history):
 
 def determine_result(game):
 
-    if isinstance(game.get("white"), dict):
+    if not isinstance(game.get("white"), dict):
+        return None, None
 
-        white = game["white"]
-        black = game["black"]
+    white = game["white"]
+    black = game["black"]
 
-        if white.get("result") == "win":
-            return white["username"], black["username"]
+    white_result = white.get("result")
+    black_result = black.get("result")
 
-        if black.get("result") == "win":
-            return black["username"], white["username"]
+    # White won
+    if white_result == "win":
+        return white["username"], black["username"]
 
+    # Black won
+    if black_result == "win":
+        return black["username"], white["username"]
+
+    # No winner:
+    # - repetition
+    # - stalemate
+    # - agreed draw
+    # - insufficient material
+    # - unfinished game
+    #
+    # Ignore these while the match is active.
     return None, None
 
 
@@ -258,6 +272,7 @@ def process_completed_match(match):
         ),
         "winner": winner
     }
+
 
 def process_registered_match(match):
 
@@ -438,7 +453,6 @@ def main():
     if not matches:
         print("No matches found")
         return
-
 
     game_notifications_sent = 0
     match_notifications_sent = 0
@@ -641,4 +655,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()	
