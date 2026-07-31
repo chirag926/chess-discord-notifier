@@ -259,7 +259,6 @@ def process_completed_match(match):
         "winner": winner
     }
 
-
 def process_registered_match(match):
 
     match_id = match["@id"].split("/")[-1]
@@ -322,7 +321,7 @@ def send_game_update_notification(match_name, games, score):
         )
 
     message += (
-        f"🏆 **Current Match Score:**\n"
+        f"🏆 **Daily Club Match Score:**\n"
         f"{score}"
     )
 
@@ -446,10 +445,6 @@ def main():
     registration_notifications_sent = 0
 
 
-    #
-    # REGISTERED MATCHES
-    #
-
     registered_matches = matches.get(
         "registered",
         []
@@ -471,15 +466,6 @@ def main():
 
         if registered_match:
 
-            print()
-            print("NEW REGISTERED MATCH:")
-            print(
-                registered_match["match"]
-            )
-            print(
-                registered_match["opponent"]
-            )
-
             send_registration_notification(
                 registered_match
             )
@@ -493,10 +479,6 @@ def main():
                 )
             }
 
-
-    #
-    # FINISHED MATCHES
-    #
 
     finished_matches = matches.get(
         "finished",
@@ -519,15 +501,6 @@ def main():
 
         if completed_match:
 
-            print()
-            print("NEW COMPLETED MATCH:")
-            print(
-                completed_match["match"]
-            )
-            print(
-                completed_match["score"]
-            )
-
             send_match_notification(
                 completed_match
             )
@@ -541,10 +514,6 @@ def main():
                 )
             }
 
-
-    #
-    # ACTIVE MATCHES
-    #
 
     active_matches = matches.get(
         "in_progress",
@@ -613,10 +582,6 @@ def main():
             )
 
 
-    #
-    # CLEANUP HISTORY
-    #
-
     seen_games = cleanup_history(
         seen_games,
         MAX_GAME_HISTORY
@@ -652,39 +617,18 @@ def main():
 
 
     if seen_games != original_seen_games:
-
-        save_seen_games(
-            seen_games
-        )
-
-        print(
-            "seen_games.json updated"
-        )
+        save_seen_games(seen_games)
+        print("seen_games.json updated")
 
 
     if seen_matches != original_seen_matches:
-
-        save_seen_matches(
-            seen_matches
-        )
-
-        print(
-            "seen_matches.json updated"
-        )
+        save_seen_matches(seen_matches)
+        print("seen_matches.json updated")
 
 
-    if (
-        seen_registered_matches
-        != original_seen_registered_matches
-    ):
-
-        save_seen_registered_matches(
-            seen_registered_matches
-        )
-
-        print(
-            "seen_registered_matches.json updated"
-        )
+    if seen_registered_matches != original_seen_registered_matches:
+        save_seen_registered_matches(seen_registered_matches)
+        print("seen_registered_matches.json updated")
 
 
     if (
@@ -693,12 +637,8 @@ def main():
         and seen_registered_matches
         == original_seen_registered_matches
     ):
-
-        print(
-            "No JSON changes"
-        )
+        print("No JSON changes")
 
 
 if __name__ == "__main__":
-
     main()
