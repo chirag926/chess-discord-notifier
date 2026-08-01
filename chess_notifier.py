@@ -130,7 +130,7 @@ def cleanup_history(history, max_history):
 
     sorted_history = sorted(
         history.items(),
-        key=lambda x: x[1]["date"],
+        key=lambda x: x[1].get("date", ""),
         reverse=True
     )
 
@@ -162,7 +162,6 @@ def determine_result(game):
     black_result = black.get("result")
 
 
-    # White won
     if white_result == "win":
 
         return {
@@ -172,7 +171,6 @@ def determine_result(game):
         }
 
 
-    # Black won
     if black_result == "win":
 
         return {
@@ -181,12 +179,6 @@ def determine_result(game):
             "draw": False
         }
 
-
-    # Finished game with no winner = draw
-    finished_results = [
-        white_result,
-        black_result
-    ]
 
     if (
         white_result
@@ -203,7 +195,6 @@ def determine_result(game):
         }
 
 
-    # Not finished yet
     return None
 
 
@@ -234,6 +225,8 @@ def process_match(match):
 
     notifications = []
 
+    processed_games = set()
+
 
     for team in ["team1", "team2"]:
 
@@ -256,13 +249,40 @@ def process_match(match):
 
             for game in board.get("games", []):
 
+                game_id = game["url"].split("/")[-1]
+
+
+                if game_id in processed_games:
+                    continue
+
+
                 result = determine_result(game)
 
                 if not result:
                     continue
 
 
-                game_id = game["url"].split("/")[-1]
+                processed_games.add(game_id)
+
+
+                winner_team = ""
+
+
+                if not result["draw"]:
+
+                    winner_username = result["winner"].lower()
+
+
+                    for check_team in ["team1", "team2"]:
+
+                        for check_player in data["teams"][check_team]["players"]:
+
+                            if (
+                                check_player["username"].lower()
+                                == winner_username
+                            ):
+
+                                winner_team = data["teams"][check_team]["name"]
 
 
                 notifications.append(
@@ -273,7 +293,7 @@ def process_match(match):
                         "player1": result.get("player1"),
                         "player2": result.get("player2"),
                         "draw": result.get("draw", False),
-                        "winner_team": team_name,
+                        "winner_team": winner_team,
                         "match": data["name"],
                         "url": game["url"]
                     }
@@ -485,7 +505,7 @@ def send_registration_notification(match):
     start_time = datetime.fromtimestamp(
         match["start_time"]
     ).strftime(
-        "%A, %B %-d, %Y %-I:%M %p"
+        "%A, %B %d, %Y %I:%M %p"
     )
 
 
@@ -537,9 +557,6 @@ def main():
 
 
     game_notifications_sent = 0
-    match_notifications_sent = 0
-    registration_notifications_sent = 0
-
 
 
     active_matches = matches.get(
