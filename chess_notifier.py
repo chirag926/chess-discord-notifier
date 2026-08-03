@@ -235,8 +235,6 @@ def determine_result(game):
     return None
 
 
-
-
 def process_match(match):
 
     match_id = match["@id"].split("/")[-1]
@@ -325,9 +323,7 @@ def process_match(match):
 
                 if not result["draw"]:
 
-                    winner_username = (
-                        result["winner"].lower()
-                    )
+                    winner_username = result["winner"].lower()
 
 
                     for check_team in ["team1", "team2"]:
@@ -360,6 +356,9 @@ def process_match(match):
 
 
     return notifications, score
+
+
+
 
 
 def process_completed_match(match):
@@ -409,6 +408,7 @@ def process_completed_match(match):
 
 
 
+
 def send_game_update_notification(match_name, games, score):
 
     webhook_url = os.environ.get(
@@ -431,7 +431,6 @@ def send_game_update_notification(match_name, games, score):
         f"⚔️ **Match:** {match_name}\n\n"
         f"📝 **Games completed since the last update:**\n\n"
     )
-
 
 
     for game in games:
@@ -461,7 +460,6 @@ def send_game_update_notification(match_name, games, score):
                 f"**{game['loser']}**\n"
                 f"  🎮 {game['url']}\n\n"
             )
-
 
 
     message += (
@@ -525,7 +523,6 @@ def send_match_notification(match):
     )
 
 
-
     try:
 
         response = requests.post(
@@ -535,34 +532,14 @@ def send_match_notification(match):
         )
 
 
-        if response.status_code == 204:
-
-            return True
-
-
-        print(
-            "Discord notification failed:"
-        )
-
-        print(
-            response.status_code
-        )
-
-        print(
-            response.text
-        )
+        return response.status_code == 204
 
 
     except Exception as e:
 
-        print(
-            "Discord request error:"
-        )
-
         print(e)
 
-
-    return False
+        return False
 
 
 
@@ -582,7 +559,6 @@ def main():
 
     original_seen_games = dict(seen_games)
     original_seen_matches = dict(seen_matches)
-
 
 
     matches = fetch_club_matches()
@@ -615,6 +591,43 @@ def main():
 
     for match in active_matches:
 
+        match_id = match["@id"].split("/")[-1]
+
+        actual_match = fetch_match(match_id)
+
+
+        if (
+            actual_match
+            and actual_match.get("status") == "finished"
+        ):
+
+            print(
+                f"Found finished match inside active list: {match_id}"
+            )
+
+
+            if match_id not in seen_matches:
+
+                completed_match = process_completed_match(match)
+
+
+                if completed_match:
+
+                    if send_match_notification(completed_match):
+
+                        match_notifications_sent += 1
+
+                        seen_matches[match_id] = {
+                            "match": completed_match["match"],
+                            "date": datetime.now().strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                        }
+
+
+            continue
+
+
 
         notifications, score = process_match(match)
 
@@ -622,9 +635,7 @@ def main():
         unseen_games = []
 
 
-
         for notification in notifications:
-
 
             game_id = notification["game_id"]
 
@@ -632,7 +643,6 @@ def main():
             if game_id in seen_games:
 
                 continue
-
 
 
             if notification["draw"]:
@@ -670,7 +680,6 @@ def main():
                 )
 
 
-
             seen_games[game_id] = {
                 "winner": notification["winner"],
                 "loser": notification["loser"],
@@ -679,7 +688,6 @@ def main():
                     "%Y-%m-%d %H:%M:%S"
                 )
             }
-
 
 
         if unseen_games:
@@ -711,7 +719,6 @@ def main():
 
     for match in finished_matches:
 
-
         match_id = match["@id"].split("/")[-1]
 
 
@@ -720,18 +727,12 @@ def main():
             continue
 
 
-
         completed_match = process_completed_match(match)
 
 
         if completed_match:
 
-            success = send_match_notification(
-                completed_match
-            )
-
-
-            if success:
+            if send_match_notification(completed_match):
 
                 match_notifications_sent += 1
 
@@ -742,14 +743,6 @@ def main():
                         "%Y-%m-%d %H:%M:%S"
                     )
                 }
-
-
-            else:
-
-                print(
-                    f"Match notification failed for {match_id}. "
-                    "It will retry next run."
-                )
 
 
 
@@ -765,19 +758,14 @@ def main():
     )
 
 
-
     print()
-
     print(
-        f"New game notifications sent: "
-        f"{game_notifications_sent}"
+        f"New game notifications sent: {game_notifications_sent}"
     )
 
     print(
-        f"New match notifications sent: "
-        f"{match_notifications_sent}"
+        f"New match notifications sent: {match_notifications_sent}"
     )
-
 
 
     if seen_games != original_seen_games:
@@ -787,7 +775,6 @@ def main():
         print(
             "seen_games.json updated"
         )
-
 
 
     if seen_matches != original_seen_matches:
