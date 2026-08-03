@@ -47,11 +47,13 @@ def execute_api_request(url):
     return None
 
 
+
 def fetch_club_matches():
 
     url = f"https://api.chess.com/pub/club/{CLUB_NAME}/matches"
 
     return execute_api_request(url)
+
 
 
 def fetch_match(match_id):
@@ -61,9 +63,11 @@ def fetch_match(match_id):
     return execute_api_request(url)
 
 
+
 def fetch_board(board_url):
 
     return execute_api_request(board_url)
+
 
 
 def load_seen_games():
@@ -73,6 +77,7 @@ def load_seen_games():
 
     with open(SEEN_FILE, "r") as f:
         return json.load(f)
+
 
 
 def save_seen_games(seen_games):
@@ -85,6 +90,7 @@ def save_seen_games(seen_games):
         )
 
 
+
 def load_seen_matches():
 
     if not os.path.exists(SEEN_MATCHES_FILE):
@@ -92,6 +98,7 @@ def load_seen_matches():
 
     with open(SEEN_MATCHES_FILE, "r") as f:
         return json.load(f)
+
 
 
 def save_seen_matches(seen_matches):
@@ -104,6 +111,7 @@ def save_seen_matches(seen_matches):
         )
 
 
+
 def load_seen_registered_matches():
 
     if not os.path.exists(SEEN_REGISTERED_FILE):
@@ -111,6 +119,7 @@ def load_seen_registered_matches():
 
     with open(SEEN_REGISTERED_FILE, "r") as f:
         return json.load(f)
+
 
 
 def save_seen_registered_matches(seen_registered_matches):
@@ -121,6 +130,7 @@ def save_seen_registered_matches(seen_registered_matches):
             f,
             indent=4
         )
+
 
 
 def cleanup_history(history, max_history):
@@ -144,6 +154,7 @@ def cleanup_history(history, max_history):
     )
 
     return trimmed
+
 
 
 def determine_result(game):
@@ -198,6 +209,7 @@ def determine_result(game):
     return None
 
 
+
 def process_match(match):
 
     match_id = match["@id"].split("/")[-1]
@@ -229,9 +241,6 @@ def process_match(match):
 
 
     for team in ["team1", "team2"]:
-
-        team_name = data["teams"][team]["name"]
-
 
         for player in data["teams"][team]["players"]:
 
@@ -270,19 +279,28 @@ def process_match(match):
 
                 if not result["draw"]:
 
-                    winner_username = result["winner"].lower()
+                    winner_username = (
+                        result["winner"].lower()
+                    )
 
 
-                    for check_team in ["team1", "team2"]:
+                    for check_team in [
+                        "team1",
+                        "team2"
+                    ]:
 
-                        for check_player in data["teams"][check_team]["players"]:
+                        for check_player in (
+                            data["teams"][check_team]["players"]
+                        ):
 
                             if (
                                 check_player["username"].lower()
                                 == winner_username
                             ):
 
-                                winner_team = data["teams"][check_team]["name"]
+                                winner_team = (
+                                    data["teams"][check_team]["name"]
+                                )
 
 
                 notifications.append(
@@ -381,7 +399,9 @@ def process_registered_match(match):
 
 def send_game_update_notification(match_name, games, score):
 
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    webhook_url = os.environ.get(
+        "DISCORD_WEBHOOK_URL"
+    )
 
 
     if not webhook_url:
@@ -418,7 +438,7 @@ def send_game_update_notification(match_name, games, score):
 
             if game["result"] == "win":
 
-                emoji = "🎉"
+                emoji = "♟️"
 
             else:
 
@@ -448,7 +468,9 @@ def send_game_update_notification(match_name, games, score):
 
 def send_match_notification(match):
 
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    webhook_url = os.environ.get(
+        "DISCORD_WEBHOOK_URL"
+    )
 
 
     if not webhook_url:
@@ -494,7 +516,9 @@ def send_match_notification(match):
 
 def send_registration_notification(match):
 
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    webhook_url = os.environ.get(
+        "DISCORD_WEBHOOK_URL"
+    )
 
 
     if not webhook_url:
@@ -531,7 +555,9 @@ def send_registration_notification(match):
 def main():
 
     print(datetime.now())
-    print(f"Checking club: {CLUB_DISPLAY_NAME}")
+    print(
+        f"Checking club: {CLUB_DISPLAY_NAME}"
+    )
 
 
     seen_games = load_seen_games()
@@ -607,8 +633,8 @@ def main():
 
 
                 our_team_won = (
-                    OUR_TEAM_NAME
-                    in notification["winner_team"].lower()
+                    notification["winner_team"].lower()
+                    == OUR_TEAM_NAME
                 )
 
 
@@ -686,6 +712,7 @@ def main():
     )
 
 
+
     if seen_games != original_seen_games:
 
         save_seen_games(seen_games)
@@ -695,6 +722,7 @@ def main():
         )
 
 
+
     if seen_matches != original_seen_matches:
 
         save_seen_matches(seen_matches)
@@ -702,6 +730,7 @@ def main():
         print(
             "seen_matches.json updated"
         )
+
 
 
     if (
