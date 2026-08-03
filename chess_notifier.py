@@ -235,6 +235,8 @@ def determine_result(game):
     return None
 
 
+
+
 def process_match(match):
 
     match_id = match["@id"].split("/")[-1]
@@ -242,6 +244,7 @@ def process_match(match):
     data = fetch_match(match_id)
 
     if not data:
+
         return [], None
 
 
@@ -266,6 +269,7 @@ def process_match(match):
     processed_boards = set()
 
 
+
     for team in ["team1", "team2"]:
 
         for player in data["teams"][team]["players"]:
@@ -274,10 +278,12 @@ def process_match(match):
 
 
             if not board_url:
+
                 continue
 
 
             if board_url in processed_boards:
+
                 continue
 
 
@@ -288,6 +294,7 @@ def process_match(match):
 
 
             if not board:
+
                 continue
 
 
@@ -298,6 +305,7 @@ def process_match(match):
 
 
                 if game_id in processed_games:
+
                     continue
 
 
@@ -305,6 +313,7 @@ def process_match(match):
 
 
                 if not result:
+
                     continue
 
 
@@ -353,9 +362,6 @@ def process_match(match):
     return notifications, score
 
 
-
-
-
 def process_completed_match(match):
 
     match_id = match["@id"].split("/")[-1]
@@ -364,6 +370,7 @@ def process_completed_match(match):
 
 
     if not data:
+
         return None
 
 
@@ -398,7 +405,6 @@ def process_completed_match(match):
         ),
         "winner": winner
     }
-
 
 
 
@@ -483,7 +489,11 @@ def send_match_notification(match):
 
     if not webhook_url:
 
-        return
+        print(
+            "DISCORD_WEBHOOK_URL not set."
+        )
+
+        return False
 
 
 
@@ -515,11 +525,44 @@ def send_match_notification(match):
     )
 
 
-    requests.post(
-        webhook_url,
-        json={"content": message},
-        timeout=10
-    )
+
+    try:
+
+        response = requests.post(
+            webhook_url,
+            json={"content": message},
+            timeout=10
+        )
+
+
+        if response.status_code == 204:
+
+            return True
+
+
+        print(
+            "Discord notification failed:"
+        )
+
+        print(
+            response.status_code
+        )
+
+        print(
+            response.text
+        )
+
+
+    except Exception as e:
+
+        print(
+            "Discord request error:"
+        )
+
+        print(e)
+
+
+    return False
 
 
 
@@ -548,6 +591,7 @@ def main():
     if not matches:
 
         print("No matches found")
+
         return
 
 
@@ -682,20 +726,30 @@ def main():
 
         if completed_match:
 
-            send_match_notification(
+            success = send_match_notification(
                 completed_match
             )
 
 
-            match_notifications_sent += 1
+            if success:
+
+                match_notifications_sent += 1
 
 
-            seen_matches[match_id] = {
-                "match": completed_match["match"],
-                "date": datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
+                seen_matches[match_id] = {
+                    "match": completed_match["match"],
+                    "date": datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                }
+
+
+            else:
+
+                print(
+                    f"Match notification failed for {match_id}. "
+                    "It will retry next run."
                 )
-            }
 
 
 
