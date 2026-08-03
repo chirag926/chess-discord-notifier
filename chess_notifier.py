@@ -203,7 +203,6 @@ def determine_result(game):
 
 
 
-
     if black_result == "win":
 
         return {
@@ -211,7 +210,6 @@ def determine_result(game):
             "loser": white["username"],
             "draw": False
         }
-
 
 
 
@@ -231,8 +229,8 @@ def determine_result(game):
 
 
 
-
     return None
+
 
 
 def process_match(match):
@@ -418,10 +416,6 @@ def send_game_update_notification(match_name, games, score):
 
     if not webhook_url:
 
-        print(
-            "DISCORD_WEBHOOK_URL not set."
-        )
-
         return
 
 
@@ -433,8 +427,8 @@ def send_game_update_notification(match_name, games, score):
     )
 
 
-    for game in games:
 
+    for game in games:
 
         if game["draw"]:
 
@@ -444,7 +438,6 @@ def send_game_update_notification(match_name, games, score):
                 f"**{game['player2']}**\n"
                 f"  🎮 {game['url']}\n\n"
             )
-
 
         else:
 
@@ -460,6 +453,7 @@ def send_game_update_notification(match_name, games, score):
                 f"**{game['loser']}**\n"
                 f"  🎮 {game['url']}\n\n"
             )
+
 
 
     message += (
@@ -486,10 +480,6 @@ def send_match_notification(match):
 
 
     if not webhook_url:
-
-        print(
-            "DISCORD_WEBHOOK_URL not set."
-        )
 
         return False
 
@@ -523,23 +513,14 @@ def send_match_notification(match):
     )
 
 
-    try:
-
-        response = requests.post(
-            webhook_url,
-            json={"content": message},
-            timeout=10
-        )
+    response = requests.post(
+        webhook_url,
+        json={"content": message},
+        timeout=10
+    )
 
 
-        return response.status_code == 204
-
-
-    except Exception as e:
-
-        print(e)
-
-        return False
+    return response.status_code == 204
 
 
 
@@ -577,60 +558,11 @@ def main():
 
 
 
-    active_matches = matches.get(
-        "in_progress",
-        []
-    )
+    def handle_game_notifications(match):
 
-
-    print(
-        f"Active matches found: {len(active_matches)}"
-    )
-
-
-
-    for match in active_matches:
-
-        match_id = match["@id"].split("/")[-1]
-
-        actual_match = fetch_match(match_id)
-
-
-        if (
-            actual_match
-            and actual_match.get("status") == "finished"
-        ):
-
-            print(
-                f"Found finished match inside active list: {match_id}"
-            )
-
-
-            if match_id not in seen_matches:
-
-                completed_match = process_completed_match(match)
-
-
-                if completed_match:
-
-                    if send_match_notification(completed_match):
-
-                        match_notifications_sent += 1
-
-                        seen_matches[match_id] = {
-                            "match": completed_match["match"],
-                            "date": datetime.now().strftime(
-                                "%Y-%m-%d %H:%M:%S"
-                            )
-                        }
-
-
-            continue
-
-
+        nonlocal game_notifications_sent
 
         notifications, score = process_match(match)
-
 
         unseen_games = []
 
@@ -645,6 +577,7 @@ def main():
                 continue
 
 
+
             if notification["draw"]:
 
                 unseen_games.append(
@@ -655,7 +588,6 @@ def main():
                         "url": notification["url"]
                     }
                 )
-
 
             else:
 
@@ -690,6 +622,7 @@ def main():
             }
 
 
+
         if unseen_games:
 
             send_game_update_notification(
@@ -698,10 +631,73 @@ def main():
                 score
             )
 
+            game_notifications_sent += len(unseen_games)
 
-            game_notifications_sent += len(
-                unseen_games
+
+
+
+
+    active_matches = matches.get(
+        "in_progress",
+        []
+    )
+
+
+    print(
+        f"Active matches found: {len(active_matches)}"
+    )
+
+
+
+    for match in active_matches:
+
+        match_id = match["@id"].split("/")[-1]
+
+        actual_match = fetch_match(match_id)
+
+
+        if (
+            actual_match
+            and actual_match.get("status") == "finished"
+        ):
+
+            print(
+                f"Found finished match inside active list: {match_id}"
             )
+
+
+            # Process games first
+            handle_game_notifications(match)
+
+
+            # Then process match completion
+            if match_id not in seen_matches:
+
+                completed_match = process_completed_match(match)
+
+
+                if completed_match:
+
+                    if send_match_notification(completed_match):
+
+                        match_notifications_sent += 1
+
+
+                        seen_matches[match_id] = {
+                            "match": completed_match["match"],
+                            "date": datetime.now().strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                        }
+
+
+            continue
+
+
+
+        handle_game_notifications(match)
+
+
 
 
 
@@ -727,6 +723,7 @@ def main():
             continue
 
 
+
         completed_match = process_completed_match(match)
 
 
@@ -746,6 +743,7 @@ def main():
 
 
 
+
     seen_games = cleanup_history(
         seen_games,
         MAX_GAME_HISTORY
@@ -758,7 +756,9 @@ def main():
     )
 
 
+
     print()
+
     print(
         f"New game notifications sent: {game_notifications_sent}"
     )
@@ -768,6 +768,7 @@ def main():
     )
 
 
+
     if seen_games != original_seen_games:
 
         save_seen_games(seen_games)
@@ -775,6 +776,7 @@ def main():
         print(
             "seen_games.json updated"
         )
+
 
 
     if seen_matches != original_seen_matches:
