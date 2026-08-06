@@ -435,8 +435,8 @@ def send_game_update_notification(match_name, games, score):
             message += (
                 f"🤝 **Draw:** "
                 f"**{game['player1']}** vs "
-                f"**{game['player2']}**\n"
-                f"  🎮 {game['url']}\n\n"
+                f"**{game['player2']}**\n\n"
+                f"🎮 {game['url']}\n\n"
             )
 
         else:
@@ -450,15 +450,15 @@ def send_game_update_notification(match_name, games, score):
 
             message += (
                 f"{emoji} **{game['winner']}** defeated "
-                f"**{game['loser']}**\n"
-                f"  🎮 {game['url']}\n\n"
+                f"**{game['loser']}**\n\n"
+                f"🎮 {game['url']}\n\n"
             )
 
 
 
     message += (
         f"🏆 **Daily Club Match Score:**\n"
-        f"{score}"
+        f"{score}\n"
     )
 
 
@@ -509,7 +509,7 @@ def send_match_notification(match):
         f"🏟️ **Match:** {match['match']}\n\n"
         f"{emoji} {result}\n\n"
         f"🏆 **Final Score:**\n"
-        f"{match['score']}"
+        f"{match['score']}\n"
     )
 
 
