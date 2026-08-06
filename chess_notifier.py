@@ -433,7 +433,7 @@ def send_game_update_notification(match_name, games, score):
         if game["draw"]:
 
             message += (
-                f"• 🤝 **Draw:** "
+                f"🤝 **Draw:** "
                 f"**{game['player1']}** vs "
                 f"**{game['player2']}**\n"
                 f"  🎮 {game['url']}\n\n"
@@ -449,7 +449,7 @@ def send_game_update_notification(match_name, games, score):
 
 
             message += (
-                f"• {emoji} **{game['winner']}** defeated "
+                f"{emoji} **{game['winner']}** defeated "
                 f"**{game['loser']}**\n"
                 f"  🎮 {game['url']}\n\n"
             )
