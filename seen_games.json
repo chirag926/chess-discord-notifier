@@ -1329,5 +1329,11 @@
         "loser": null,
         "match": "No PTO",
         "date": "2026-10-12 17:54:58"
+    },
+    "1038072112": {
+        "winner": "tatanka400",
+        "loser": "MaxCocchi",
+        "match": "Pumpkin Patches",
+        "date": "2026-10-13 00:14:26"
     }
 }
