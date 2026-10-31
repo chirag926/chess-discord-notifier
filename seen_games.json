@@ -1545,5 +1545,17 @@
         "loser": null,
         "match": "1200 - 1500 ONLY",
         "date": "2026-10-29 23:20:16"
+    },
+    "1048823960": {
+        "winner": "eqfries",
+        "loser": "MaxCocchi",
+        "match": "Battle of the Whispering Wood",
+        "date": "2026-10-31 06:18:59"
+    },
+    "1042766620": {
+        "winner": "fish_gills",
+        "loser": "freddytong",
+        "match": "1200 - 1500 ONLY",
+        "date": "2026-10-31 06:19:01"
     }
 }
