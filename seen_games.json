@@ -1737,5 +1737,17 @@
         "loser": "Whyitbman",
         "match": "if (rating < 800) { return true; }",
         "date": "2026-11-15 19:15:57"
+    },
+    "1058386006": {
+        "winner": "philthybhakta",
+        "loser": "Cilisti",
+        "match": "Battle of the Trident",
+        "date": "2026-11-16 20:53:13"
+    },
+    "1058386008": {
+        "winner": "philthybhakta",
+        "loser": "Cilisti",
+        "match": "Battle of the Trident",
+        "date": "2026-11-16 20:53:13"
     }
 }
