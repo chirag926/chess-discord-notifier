@@ -1797,5 +1797,11 @@
         "loser": "MasterIFS",
         "match": "if (rating < 800) { return true; }",
         "date": "2026-11-21 03:58:53"
+    },
+    "1052507066": {
+        "winner": "Long0406201767",
+        "loser": "jamieselects",
+        "match": "Road to 1200",
+        "date": "2026-11-21 19:41:09"
     }
 }
